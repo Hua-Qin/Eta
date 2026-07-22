@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.runtime.getValue
@@ -24,6 +25,7 @@ import fuck.andes.agent.runtime.AgentUiHandoffPayload
 import fuck.andes.agent.skill.SkillRuntime
 import fuck.andes.config.Prefs
 import fuck.andes.core.AndroidAgentLogger
+import fuck.andes.core.ApiCompat
 import fuck.andes.core.safeLogType
 import fuck.andes.data.repository.RuntimeConfigRepository
 import fuck.andes.ui.model.AgentChatHomeUiState
@@ -1462,9 +1464,12 @@ private fun isRootAvailable(): Boolean {
 }
 
 private fun hasAppListAccess(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+        return true
+    }
     return try {
         val pm = context.packageManager
-        val packages = pm.getInstalledPackages(0)
+        val packages = ApiCompat.getInstalledPackages(pm, 0)
         packages.size > 10
     } catch (e: Exception) {
         false

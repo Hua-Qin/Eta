@@ -140,15 +140,9 @@ internal object HookSupport {
             ?: componentOrPackage.substringBefore('/', componentOrPackage)
     }
 
-    fun isPackageInstalled(context: Context, packageName: String): Boolean = try {
-        context.packageManager.getPackageInfo(packageName, 0)
-        true
-    } catch (_: PackageManager.NameNotFoundException) {
-        false
-    } catch (_: SecurityException) {
-        false
-    }
+    fun isPackageInstalled(context: Context, packageName: String): Boolean =
+        ApiCompat.getPackageInfo(context.packageManager, packageName) != null
 
     fun resolvesActivity(context: Context, intent: Intent): Boolean =
-        context.packageManager.resolveActivity(intent, 0) != null
+        ApiCompat.resolveActivity(context.packageManager, intent) != null
 }

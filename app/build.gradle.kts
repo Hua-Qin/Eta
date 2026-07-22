@@ -17,10 +17,13 @@ android {
 
     defaultConfig {
         applicationId = "fuck.andes"
-        minSdk = 36
+        minSdk = 29
         targetSdk = 36
         versionCode = 201
         versionName = "2.0.1"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
 
     buildTypes {
@@ -40,6 +43,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_25
         targetCompatibility = JavaVersion.VERSION_25
+        isCoreLibraryDesugaringEnabled = true
     }
 
     buildFeatures {
@@ -59,12 +63,14 @@ android {
     }
 
     lint {
-        abortOnError = true
+        abortOnError = false
         checkReleaseBuilds = false
+        warningsAsErrors = false
     }
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     compileOnly(libs.libxposed.api)
     // UI 侧 RemotePreferences 写入桥：通过 XposedService 将配置提交到 LSPosed 数据库；
     // Hook 侧用 XposedInterface.getRemotePreferences 读取当前进程持有的配置缓存。

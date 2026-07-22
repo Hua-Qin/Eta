@@ -59,3 +59,46 @@
 # 不在 App 层重复保留整个类或包，避免阻断裁剪、内联和混淆。
 # 保留源码与行号属性，便于使用 release mapping 还原线上堆栈。
 -keepattributes SourceFile,LineNumberTable
+
+# ── 低版本兼容 ───────────────────────────────────────────────────────────────
+# 反射调用的类在低版本可能不存在，R8 不应因缺少引用报错
+-dontwarn android.app.**
+-dontwarn android.os.**
+-dontwarn android.content.**
+-dontwarn android.view.**
+-dontwarn android.hardware.**
+-dontwarn android.provider.**
+
+# Room 数据库在低版本上的兼容性，保留实体类的默认构造函数
+-keepclassmembers class fuck.andes.data.db.** {
+    <init>(...);
+}
+
+# kotlinx.serialization 生成的序列化器在 R8 下需要保留可访问性
+-if @kotlinx.serialization.Serializable class **
+-keepclassmembers class <1> {
+    static <1>$Companion Companion;
+}
+-if @kotlinx.serialization.Serializable class ** {
+    static **$* *;
+}
+-keepclassmembers @kotlinx.serialization.Serializable class ** {
+    ** serializer(...);
+    ** descriptor;
+}
+
+# ── 优化：更激进的代码移除 ──────────────────────────────────────────────────
+# Xposed Hook 的目标类通常通过反射访问，优化时保留所有 hook 回调入口
+-keep,allowoptimization,allowobfuscation class fuck.andes.hook.** {
+    *;
+}
+
+# 无障碍服务的回调入口必须保留
+-keep class fuck.andes.agent.accessibility.AgentAccessibilityService {
+    public <init>();
+}
+
+# 运行时服务入口必须保留
+-keep class fuck.andes.agent.runtime.AgentRuntimeService {
+    public <init>();
+}
