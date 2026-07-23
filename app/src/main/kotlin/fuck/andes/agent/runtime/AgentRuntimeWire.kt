@@ -7,6 +7,7 @@ import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import fuck.andes.agent.model.AgentConversationCodec
 import fuck.andes.agent.model.AgentModelClient
+import fuck.andes.core.ApiCompat
 import fuck.andes.data.model.CustomBody
 import fuck.andes.data.model.CustomHeader
 import java.io.Closeable
@@ -256,8 +257,8 @@ internal object AgentRuntimeWire {
     fun incomingRunRequestFromBundle(bundle: Bundle): IncomingRunRequest {
         val images = mutableListOf<WireImage>()
         try {
-            bundle.getParcelableArrayList(KEY_IMAGES, Bundle::class.java).orEmpty().forEach { image ->
-                val descriptor = image.getParcelable(KEY_IMAGE_FD, ParcelFileDescriptor::class.java)
+            ApiCompat.getParcelableArrayList(bundle, KEY_IMAGES, Bundle::class.java).orEmpty().forEach { image ->
+                val descriptor = ApiCompat.getParcelable(image, KEY_IMAGE_FD, ParcelFileDescriptor::class.java)
                 val reference = image.getString(KEY_IMAGE_URL)
                     ?: image.getString(KEY_DATA_URL) // 兼容升级前仍内联 data URL 的入口进程。
                 require((reference == null) xor (descriptor == null)) {
@@ -286,8 +287,9 @@ internal object AgentRuntimeWire {
     /** 拒绝或解析失败的请求不会进入 [IncomingRunRequest]，需显式释放其中的描述符。 */
     fun closeImageDescriptors(bundle: Bundle?) {
         runCatching {
-            bundle?.getParcelableArrayList(KEY_IMAGES, Bundle::class.java).orEmpty().forEach { image ->
-                image.getParcelable(KEY_IMAGE_FD, ParcelFileDescriptor::class.java)?.close()
+            bundle ?: return@runCatching
+            ApiCompat.getParcelableArrayList(bundle, KEY_IMAGES, Bundle::class.java).orEmpty().forEach { image ->
+                ApiCompat.getParcelable(image, KEY_IMAGE_FD, ParcelFileDescriptor::class.java)?.close()
             }
         }
     }
@@ -344,7 +346,7 @@ internal object AgentRuntimeWire {
                 customHeaders = decodeCustomHeaders(bundle.getString(KEY_CUSTOM_HEADERS_JSON)),
                 customBody = decodeCustomBody(bundle.getString(KEY_CUSTOM_BODY_JSON))
             ),
-            history = bundle.getParcelableArrayList(KEY_HISTORY, Bundle::class.java).orEmpty().map { message ->
+            history = ApiCompat.getParcelableArrayList(bundle, KEY_HISTORY, Bundle::class.java).orEmpty().map { message ->
                 AgentModelClient.ConversationMessage(
                     role = message.getString(KEY_ROLE).orEmpty(),
                     content = message.getString(KEY_CONTENT).orEmpty(),
@@ -445,7 +447,7 @@ internal object AgentRuntimeWire {
     }
 
     fun completedRunsFromBundle(bundle: Bundle): List<CompletedRun> =
-        bundle.getParcelableArrayList(KEY_RESULTS, Bundle::class.java)
+        ApiCompat.getParcelableArrayList(bundle, KEY_RESULTS, Bundle::class.java)
             .orEmpty()
             .map(::completedRunFromBundle)
 

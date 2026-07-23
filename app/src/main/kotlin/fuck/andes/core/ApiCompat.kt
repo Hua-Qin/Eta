@@ -9,9 +9,11 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.Point
 import android.os.Build
+import android.os.Bundle
+import android.os.Parcelable
 import android.view.WindowManager
 
-@Suppress("DEPRECATION")
+@Suppress("DEPRECATION", "UNCHECKED_CAST")
 object ApiCompat {
 
     fun getPackageInfo(pm: PackageManager, packageName: String, flags: Int = 0): PackageInfo? =
@@ -66,6 +68,27 @@ object ApiCompat {
         } else {
             @Suppress("DEPRECATION")
             pm.resolveActivity(intent, flags)
+        }
+
+    fun <T : Parcelable> getParcelableArrayList(bundle: Bundle, key: String, clazz: Class<T>): ArrayList<T>? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            bundle.getParcelableArrayList(key, clazz)
+        } else {
+            bundle.getParcelableArrayList(key) as? ArrayList<T>
+        }
+
+    fun <T : Parcelable> getParcelable(bundle: Bundle, key: String, clazz: Class<T>): T? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            bundle.getParcelable(key, clazz)
+        } else {
+            bundle.getParcelable(key) as? T
+        }
+
+    fun <T : Parcelable> getParcelableExtra(intent: Intent, key: String, clazz: Class<T>): T? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(key, clazz)
+        } else {
+            intent.getParcelableExtra(key) as? T
         }
 
     fun getRealDisplaySize(context: Context): Point {

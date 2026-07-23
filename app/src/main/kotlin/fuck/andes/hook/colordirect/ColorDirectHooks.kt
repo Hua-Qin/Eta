@@ -1,5 +1,6 @@
 package fuck.andes.hook.colordirect
 
+import fuck.andes.core.ApiCompat
 import fuck.andes.core.HookSupport
 import fuck.andes.core.HookInstallation
 import fuck.andes.core.HookRegistrar
@@ -139,10 +140,7 @@ internal object ColorDirectHooks {
         if (startInfoClass != null && Parcelable::class.java.isAssignableFrom(startInfoClass)) {
             @Suppress("UNCHECKED_CAST")
             val typedStartInfoClass = startInfoClass as Class<Parcelable>
-            intent.getParcelableExtra(
-                ModuleConfig.COLOR_DIRECT_EXTRA_START_INFO,
-                typedStartInfoClass
-            )?.let { return it }
+            ApiCompat.getParcelableExtra(intent, ModuleConfig.COLOR_DIRECT_EXTRA_START_INFO, typedStartInfoClass)?.let { return it }
         }
 
         return runCatching {
