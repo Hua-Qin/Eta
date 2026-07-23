@@ -464,9 +464,12 @@ internal class RootShellDeviceController(
                             JSONObject(it).put("button", normalized).toString()
                         }
                     }
-                    return nodeActionJson("press_key", result).let {
-                        JSONObject(it).put("button", normalized).toString()
+                    if (result.code == "ACTION_OUTCOME_UNKNOWN") {
+                        return nodeActionJson("press_key", result).let {
+                            JSONObject(it).put("button", normalized).toString()
+                        }
                     }
+                    // imeEnter 失败时回退到 input keyevent 66
                 }
             }
         }

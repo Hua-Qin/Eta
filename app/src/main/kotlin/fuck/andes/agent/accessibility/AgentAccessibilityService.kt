@@ -794,13 +794,18 @@ class AgentAccessibilityService : AccessibilityService() {
                 "NO_FOCUSED_EDITABLE",
                 "没有获得输入焦点的可编辑节点",
             )
+        // API 33+ 优先用 ACTION_IME_ENTER
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)
         ) {
-            NodeActionResult.success(method = "ACTION_IME_ENTER")
-        } else {
-            NodeActionResult.failure("ACTION_FAILED", "输入节点拒绝回车动作")
+            return@runNodeActionOnMainSync NodeActionResult.success(method = "ACTION_IME_ENTER")
         }
+        // 低版本回退：先尝试 ACTION_CLICK（部分应用的可编辑节点 click 即提交）
+        if (node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+            return@runNodeActionOnMainSync NodeActionResult.success(method = "ACTION_CLICK_FALLBACK")
+        }
+        // 最终由调用方通过 shell input keyevent 66 兜底
+        NodeActionResult.failure("ACTION_FAILED", "输入节点拒绝回车动作")
     }
 
     fun gestureTap(x: Float, y: Float, durationMs: Long = 50): NodeActionResult =
@@ -880,6 +885,19 @@ class AgentAccessibilityService : AccessibilityService() {
     fun captureScreenshotExcludingOverlays(
         excludedPackages: Set<String> = emptySet(),
     ): ScreenshotCaptureResult {
+        // API < 30 不支持 takeScreenshotOfWindow，返回空结果让调用方回退到 root screencap
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return ScreenshotCaptureResult(
+                bitmap = null,
+                complete = false,
+                expectedWindows = 0,
+                capturedWindows = 0,
+                missingWindowIds = emptyList(),
+                failureCodes = emptyMap(),
+                timedOut = false,
+                criticalWindowMissing = false,
+            )
+        }
         if (Looper.myLooper() == Looper.getMainLooper()) {
             return ScreenshotCaptureResult.unavailable()
         }
@@ -981,13 +999,6 @@ class AgentAccessibilityService : AccessibilityService() {
         val acceptingResults = AtomicBoolean(true)
 
         for (window in captureWindows) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-                synchronized(lock) {
-                    failures[window.id] = -1
-                }
-                latch.countDown()
-                continue
-            }
             runCatching {
                 takeScreenshotOfWindow(window.id, screenshotExecutor, object : TakeScreenshotCallback {
                     override fun onSuccess(screenshot: ScreenshotResult) {
