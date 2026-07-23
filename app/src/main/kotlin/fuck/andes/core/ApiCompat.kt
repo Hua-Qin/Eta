@@ -71,21 +71,20 @@ object ApiCompat {
         }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Parcelable> getParcelableArrayList(bundle: Bundle, key: String, clazz: Class<T>): ArrayList<T>? =
+    fun <T : Parcelable> getParcelableArrayList(bundle: Bundle, key: String, clazz: Class<T>): ArrayList<T>? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            bundle.getParcelableArrayList(key, clazz)
-        } else {
-            val raw = bundle.getParcelableArrayList(key) as ArrayList<*>?
-            raw?.let { list ->
-                val result = ArrayList<T>(list.size)
-                for (item in list) {
-                    if (clazz.isInstance(item)) {
-                        result.add(item as T)
-                    }
-                }
-                result
+            return bundle.getParcelableArrayList(key, clazz)
+        }
+        val rawList: ArrayList<Parcelable>? = bundle.getParcelableArrayList(key)
+        if (rawList == null) return null
+        val result = ArrayList<T>(rawList.size)
+        for (item in rawList) {
+            if (clazz.isInstance(item)) {
+                result.add(item as T)
             }
         }
+        return result
+    }
 
     fun <T : Parcelable> getParcelable(bundle: Bundle, key: String, clazz: Class<T>): T? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
