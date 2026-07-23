@@ -13,7 +13,7 @@ import android.os.Bundle
 import android.os.Parcelable
 import android.view.WindowManager
 
-@Suppress("DEPRECATION", "UNCHECKED_CAST")
+@Suppress("DEPRECATION")
 object ApiCompat {
 
     fun getPackageInfo(pm: PackageManager, packageName: String, flags: Int = 0): PackageInfo? =
@@ -70,11 +70,19 @@ object ApiCompat {
             pm.resolveActivity(intent, flags)
         }
 
+    @Suppress("UNCHECKED_CAST")
     fun <T : Parcelable> getParcelableArrayList(bundle: Bundle, key: String, clazz: Class<T>): ArrayList<T>? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             bundle.getParcelableArrayList(key, clazz)
         } else {
-            bundle.getParcelableArrayList(key) as? ArrayList<T>
+            val list = bundle.getParcelableArrayList(key) ?: return null
+            val result = ArrayList<T>(list.size)
+            for (item in list) {
+                if (clazz.isInstance(item)) {
+                    result.add(item as T)
+                }
+            }
+            result
         }
 
     fun <T : Parcelable> getParcelable(bundle: Bundle, key: String, clazz: Class<T>): T? =
