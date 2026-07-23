@@ -11,6 +11,7 @@ import android.graphics.Point
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.WindowManager
 
 @Suppress("DEPRECATION")
@@ -126,6 +127,17 @@ object ApiCompat {
         )
         return mode == AppOpsManager.MODE_ALLOWED
     }
+
+    /**
+     * AccessibilityNodeInfo.getUniqueId() 是 API 33 (Tiramisu) 新增方法。
+     * 低版本返回空字符串。
+     */
+    fun getUniqueId(node: AccessibilityNodeInfo?): String =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && node != null) {
+            node.uniqueId.orEmpty()
+        } else {
+            ""
+        }
 
     val isAtLeastR: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
     val isAtLeastT: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU

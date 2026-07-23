@@ -35,6 +35,7 @@ import fuck.andes.agent.device.ScrollEvidenceContract
 import fuck.andes.agent.device.ScrollMovementSource
 import fuck.andes.agent.device.RootScrollMotionContract
 import fuck.andes.core.AndroidAgentLogger
+import fuck.andes.core.ApiCompat
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -275,7 +276,7 @@ class AgentAccessibilityService : AccessibilityService() {
             maxScrollY = event.maxScrollY,
             fromIndex = event.fromIndex,
             toIndex = event.toIndex,
-            sourceUniqueId = source?.uniqueId.orEmpty(),
+            sourceUniqueId = ApiCompat.getUniqueId(source),
             sourceViewId = source?.viewIdResourceName.orEmpty(),
             sourceClassName = source?.className?.toString().orEmpty(),
             sourceBounds = sourceBounds,
@@ -1396,7 +1397,7 @@ class AgentAccessibilityService : AccessibilityService() {
                 if (!node.isVisibleToUser) return
                 val bounds = node.bounds()
                 val key = buildString {
-                    append(node.uniqueId.orEmpty())
+                    append(ApiCompat.getUniqueId(node))
                     append('|')
                     append(node.className?.toString().orEmpty())
                     append('|')
@@ -1407,7 +1408,7 @@ class AgentAccessibilityService : AccessibilityService() {
                     append(node.contentDescription?.toString().orEmpty().take(80))
                 }
                 if (
-                    node.uniqueId?.isNotBlank() == true ||
+                    ApiCompat.getUniqueId(node).isNotBlank() ||
                     node.viewIdResourceName?.isNotBlank() == true ||
                     node.text?.isNotBlank() == true ||
                     node.contentDescription?.isNotBlank() == true
@@ -1634,7 +1635,7 @@ class AgentAccessibilityService : AccessibilityService() {
                 out += IndexedNode(
                     index = out.size,
                     node = node,
-                    uniqueId = node.uniqueId.orEmpty(),
+                    uniqueId = ApiCompat.getUniqueId(node),
                     windowId = node.windowId,
                     text = text,
                     desc = desc,
@@ -2119,7 +2120,7 @@ class AgentAccessibilityService : AccessibilityService() {
             if (!runCatching { node.refresh() }.getOrDefault(false)) return null
             if (!node.isVisibleToUser || !node.isEnabled) return null
             val refreshedIdentity = AccessibilityNodeIdentity(
-                uniqueId = node.uniqueId.orEmpty(),
+                uniqueId = ApiCompat.getUniqueId(node),
                 windowId = node.windowId,
                 packageName = node.packageName?.toString().orEmpty(),
                 className = node.className?.toString().orEmpty(),
@@ -2143,7 +2144,7 @@ class AgentAccessibilityService : AccessibilityService() {
             fun capture(node: AccessibilityNodeInfo): NodeActionTarget = NodeActionTarget(
                 node = node,
                 identity = AccessibilityNodeIdentity(
-                    uniqueId = node.uniqueId.orEmpty(),
+                    uniqueId = ApiCompat.getUniqueId(node),
                     windowId = node.windowId,
                     packageName = node.packageName?.toString().orEmpty(),
                     className = node.className?.toString().orEmpty(),
@@ -2218,7 +2219,7 @@ class AgentAccessibilityService : AccessibilityService() {
     ) {
         companion object {
             fun from(node: AccessibilityNodeInfo): ScrollTargetIdentity = ScrollTargetIdentity(
-                uniqueId = node.uniqueId.orEmpty(),
+                uniqueId = ApiCompat.getUniqueId(node),
                 viewId = node.viewIdResourceName.orEmpty(),
                 className = node.className?.toString().orEmpty(),
                 bounds = Rect().also(node::getBoundsInScreen),
