@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import fuck.andes.core.AndroidAgentLogger
+import fuck.andes.core.ApiCompat
 import fuck.andes.core.safeLogType
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -135,12 +136,7 @@ internal class GoogleAppSystemizerInstaller(
     }
 
     private fun findGoogleAppInfo(): ApplicationInfo? =
-        runCatching {
-            context.packageManager.getApplicationInfo(
-                GOOGLE_PACKAGE,
-                PackageManager.ApplicationInfoFlags.of(0),
-            )
-        }.getOrNull()
+        ApiCompat.getApplicationInfo(context.packageManager, GOOGLE_PACKAGE, 0)
 
     private fun runSu(command: String, timeoutSeconds: Long): RootCommandResult {
         return runProcess(timeoutSeconds, "su", "-c", command)

@@ -32,6 +32,7 @@ import fuck.andes.agent.terminal.AlpineEnvironmentPaths
 import fuck.andes.agent.terminal.RootShellTerminalController
 import fuck.andes.config.Prefs
 import fuck.andes.core.AgentLogger
+import fuck.andes.core.ApiCompat
 import fuck.andes.core.HookSupport
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -585,10 +586,7 @@ internal class AgentLocalTools(
         val context = requireContext()
         val packageManager = context.packageManager
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val resolveInfos = packageManager.queryIntentActivities(
-            intent,
-            PackageManager.ResolveInfoFlags.of(0L)
-        )
+        val resolveInfos = ApiCompat.queryIntentActivities(packageManager, intent, 0)
         val apps = linkedMapOf<String, AppInfo>()
         resolveInfos.forEach { resolveInfo ->
             val activityInfo = resolveInfo.activityInfo ?: return@forEach

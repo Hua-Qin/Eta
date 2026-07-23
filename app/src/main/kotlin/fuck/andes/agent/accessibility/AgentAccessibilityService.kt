@@ -794,7 +794,9 @@ class AgentAccessibilityService : AccessibilityService() {
                 "NO_FOCUSED_EDITABLE",
                 "没有获得输入焦点的可编辑节点",
             )
-        if (node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)
+        ) {
             NodeActionResult.success(method = "ACTION_IME_ENTER")
         } else {
             NodeActionResult.failure("ACTION_FAILED", "输入节点拒绝回车动作")
@@ -979,6 +981,13 @@ class AgentAccessibilityService : AccessibilityService() {
         val acceptingResults = AtomicBoolean(true)
 
         for (window in captureWindows) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                synchronized(lock) {
+                    failures[window.id] = -1
+                }
+                latch.countDown()
+                continue
+            }
             runCatching {
                 takeScreenshotOfWindow(window.id, screenshotExecutor, object : TakeScreenshotCallback {
                     override fun onSuccess(screenshot: ScreenshotResult) {
