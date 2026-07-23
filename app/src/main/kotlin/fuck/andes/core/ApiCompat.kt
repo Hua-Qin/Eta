@@ -75,14 +75,16 @@ object ApiCompat {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             bundle.getParcelableArrayList(key, clazz)
         } else {
-            val list = bundle.getParcelableArrayList(key) ?: return null
-            val result = ArrayList<T>(list.size)
-            for (item in list) {
-                if (clazz.isInstance(item)) {
-                    result.add(item as T)
+            val raw = bundle.getParcelableArrayList(key) as ArrayList<*>?
+            raw?.let { list ->
+                val result = ArrayList<T>(list.size)
+                for (item in list) {
+                    if (clazz.isInstance(item)) {
+                        result.add(item as T)
+                    }
                 }
+                result
             }
-            result
         }
 
     fun <T : Parcelable> getParcelable(bundle: Bundle, key: String, clazz: Class<T>): T? =
