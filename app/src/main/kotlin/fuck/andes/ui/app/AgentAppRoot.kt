@@ -74,6 +74,7 @@ import fuck.andes.ui.screens.workflows.WorkflowRunScreen
 import fuck.andes.ui.screens.workflows.WorkflowsAction
 import fuck.andes.ui.screens.workflows.WorkflowEditorAction
 import fuck.andes.ui.screens.workflows.WorkflowRunAction
+import fuck.andes.ui.components.NavDestination
 import fuck.andes.agent.workflow.WorkflowManager
 import fuck.andes.agent.workflow.model.WorkflowRunState
 import kotlinx.coroutines.flow.collectLatest
@@ -113,7 +114,8 @@ fun AgentAppRoot() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    var conversationPaneOpen by remember { mutableStateOf(false) }
+    var navPaneOpen by remember { mutableStateOf(false) }
+    var historyPaneOpen by remember { mutableStateOf(false) }
     var conversationRenameTarget by remember { mutableStateOf<ConversationSummaryUi?>(null) }
     var conversationDeleteTarget by remember { mutableStateOf<ConversationSummaryUi?>(null) }
     val focusManager = LocalFocusManager.current
@@ -129,9 +131,11 @@ fun AgentAppRoot() {
 
     fun pushRoute(
         route: AppRoute,
-        restoreConversationPaneOnBack: Boolean = conversationPaneOpen,
+        restoreNavPaneOnBack: Boolean = navPaneOpen,
+        restoreHistoryPaneOnBack: Boolean = historyPaneOpen,
     ) {
-        conversationPaneOpen = restoreConversationPaneOnBack
+        navPaneOpen = restoreNavPaneOnBack
+        historyPaneOpen = restoreHistoryPaneOnBack
         navigator.push(route)
     }
 
@@ -144,13 +148,36 @@ fun AgentAppRoot() {
     fun selectConversation(conversationId: String) {
         focusManager.clearFocus()
         agentState.selectConversation(conversationId)
-        conversationPaneOpen = false
+        historyPaneOpen = false
     }
 
     fun createConversation() {
         focusManager.clearFocus()
         agentState.createConversation()
-        conversationPaneOpen = false
+        historyPaneOpen = false
+    }
+
+    fun navigateTo(destination: NavDestination) {
+        navPaneOpen = false
+        when (destination) {
+            NavDestination.CHAT -> {
+                if (navigator.current !is AppRoute.Home) {
+                    while (navigator.current !is AppRoute.Home) {
+                        navigator.pop()
+                    }
+                }
+            }
+            NavDestination.MEMORY -> {
+                // TODO: 记忆库页面
+            }
+            NavDestination.TOOLS -> pushRoute(AppRoute.Tools)
+            NavDestination.SKILLS -> pushRoute(AppRoute.Skills)
+            NavDestination.WORKFLOWS -> pushRoute(AppRoute.Workflows)
+            NavDestination.PERMISSIONS -> pushRoute(AppRoute.Permissions)
+            NavDestination.PACKAGES -> {
+                // TODO: 包管理页面
+            }
+        }
     }
 
     @Composable
@@ -161,10 +188,13 @@ fun AgentAppRoot() {
         AgentAppShell(
             currentRoute = route,
             conversationPaneState = agentState.conversationPaneState,
-            isConversationPaneOpen = conversationPaneOpen,
+            isNavPaneOpen = navPaneOpen,
+            isHistoryPaneOpen = historyPaneOpen,
             onBack = { popRoute() },
-            onOpenConversationPane = { conversationPaneOpen = true },
-            onDismissConversationPane = { conversationPaneOpen = false },
+            onOpenNavPane = { navPaneOpen = true },
+            onDismissNavPane = { navPaneOpen = false },
+            onOpenHistoryPane = { historyPaneOpen = true },
+            onDismissHistoryPane = { historyPaneOpen = false },
             onSearchConversations = { query -> agentState.updateSearchQuery(query) },
             onNewConversation = { createConversation() },
             onSelectConversation = { conversationId -> selectConversation(conversationId) },
@@ -174,11 +204,13 @@ fun AgentAppRoot() {
             onConversationDelete = { conversation ->
                 conversationDeleteTarget = conversation
             },
-            onOpenTools = { pushRoute(AppRoute.Tools) },
-            onOpenSkills = { pushRoute(AppRoute.Skills) },
-            onOpenPermissions = { pushRoute(AppRoute.Permissions) },
+            onNavigate = { destination -> navigateTo(destination) },
             onOpenSettings = { pushRoute(AppRoute.Settings) },
-            onOpenModelProviders = { pushRoute(AppRoute.ModelProviders) },
+            onOpenAbout = { },
+            onOpenHelp = { },
+            workflowCount = workflows.size,
+            packageCount = 0,
+            permissionStatus = "正常",
         ) { padding ->
             Box(
                 modifier = Modifier
@@ -213,7 +245,7 @@ fun AgentAppRoot() {
                                 AgentHomeAction.ExpandRunTrace -> Unit
                             }
                         },
-                        isDrawerOpen = conversationPaneOpen,
+                        isDrawerOpen = navPaneOpen,
                     )
                 }
             }

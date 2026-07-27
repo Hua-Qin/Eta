@@ -8,11 +8,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.composables.icons.lucide.R as LucideR
-import fuck.andes.ui.components.ConversationSidePaneScaffold
+import fuck.andes.ui.components.HistorySidePaneScaffold
+import fuck.andes.ui.components.NavDestination
+import fuck.andes.ui.components.NavigationSidePaneScaffold
 import fuck.andes.ui.navigation.AppRoute
 import fuck.andes.ui.model.ConversationPaneUiState
 import fuck.andes.ui.model.ConversationSummaryUi
@@ -22,32 +28,29 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-/**
- * Agent App 统一壳层。
- *
- * - 负责全局 Scaffold、状态栏/横向安全边距、顶层工具栏。
- * - 首页工具栏只保留历史入口与新建对话，保持聊天舞台干净。
- * - 非首页子路由统一提供返回按钮与标题，避免每个页面各自像独立设置页。
- * - Settings 保留旧 SettingsScreen 自己的 TopAppBar，壳层在此路由不显示顶部工具栏。
- */
 @Composable
 fun AgentAppShell(
     currentRoute: AppRoute?,
     conversationPaneState: ConversationPaneUiState?,
-    isConversationPaneOpen: Boolean,
+    isNavPaneOpen: Boolean,
+    isHistoryPaneOpen: Boolean,
     onBack: () -> Unit,
-    onOpenConversationPane: () -> Unit,
-    onDismissConversationPane: () -> Unit,
+    onOpenNavPane: () -> Unit,
+    onDismissNavPane: () -> Unit,
+    onOpenHistoryPane: () -> Unit,
+    onDismissHistoryPane: () -> Unit,
     onSearchConversations: (String) -> Unit,
     onNewConversation: () -> Unit,
     onSelectConversation: (String) -> Unit,
     onConversationRename: (ConversationSummaryUi) -> Unit,
     onConversationDelete: (ConversationSummaryUi) -> Unit,
-    onOpenTools: () -> Unit,
-    onOpenSkills: () -> Unit,
-    onOpenPermissions: () -> Unit,
+    onNavigate: (NavDestination) -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenModelProviders: () -> Unit,
+    onOpenAbout: () -> Unit,
+    onOpenHelp: () -> Unit,
+    workflowCount: Int = 0,
+    packageCount: Int = 0,
+    permissionStatus: String = "正常",
     modifier: Modifier = Modifier,
     content: @Composable (PaddingValues) -> Unit,
 ) {
@@ -62,7 +65,8 @@ fun AgentAppShell(
                     AgentTopBar(
                         route = currentRoute,
                         onBack = onBack,
-                        onOpenConversationPane = onOpenConversationPane,
+                        onOpenNavPane = onOpenNavPane,
+                        onOpenHistoryPane = onOpenHistoryPane,
                         onNewConversation = onNewConversation,
                     )
                 }
@@ -72,22 +76,31 @@ fun AgentAppShell(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    NavigationSidePaneScaffold(
+        currentDestination = navDestinationForRoute(currentRoute),
+        visible = isNavPaneOpen,
+        onOpen = onOpenNavPane,
+        onDismiss = onDismissNavPane,
+        onNavigate = onNavigate,
+        onOpenSettings = onOpenSettings,
+        onOpenAbout = onOpenAbout,
+        onOpenHelp = onOpenHelp,
+        workflowCount = workflowCount,
+        packageCount = packageCount,
+        permissionStatus = permissionStatus,
+        modifier = modifier,
+    ) {
         if (conversationPaneState != null && currentRoute is AppRoute.Home) {
-            ConversationSidePaneScaffold(
+            HistorySidePaneScaffold(
                 state = conversationPaneState,
-                visible = isConversationPaneOpen,
-                onOpen = onOpenConversationPane,
-                onDismiss = onDismissConversationPane,
+                visible = isHistoryPaneOpen,
+                onOpen = onOpenHistoryPane,
+                onDismiss = onDismissHistoryPane,
                 onSearchChange = onSearchConversations,
                 onConversationSelected = onSelectConversation,
                 onConversationRename = onConversationRename,
                 onConversationDelete = onConversationDelete,
-                onOpenSettings = onOpenSettings,
-                onOpenModelProviders = onOpenModelProviders,
-                onOpenTools = onOpenTools,
-                onOpenSkills = onOpenSkills,
-                onOpenPermissions = onOpenPermissions,
+                onNewConversation = onNewConversation,
             ) {
                 pageContent()
             }
@@ -97,11 +110,21 @@ fun AgentAppShell(
     }
 }
 
+private fun navDestinationForRoute(route: AppRoute?): NavDestination = when (route) {
+    is AppRoute.Home, is AppRoute.Chat -> NavDestination.CHAT
+    is AppRoute.Tools -> NavDestination.TOOLS
+    is AppRoute.Skills -> NavDestination.SKILLS
+    is AppRoute.Permissions -> NavDestination.PERMISSIONS
+    is AppRoute.Workflows -> NavDestination.WORKFLOWS
+    else -> NavDestination.CHAT
+}
+
 @Composable
 private fun AgentTopBar(
     route: AppRoute?,
     onBack: () -> Unit,
-    onOpenConversationPane: () -> Unit,
+    onOpenNavPane: () -> Unit,
+    onOpenHistoryPane: () -> Unit,
     onNewConversation: () -> Unit,
 ) {
     val isHome = route is AppRoute.Home
@@ -110,10 +133,10 @@ private fun AgentTopBar(
         color = if (route is AppRoute.Tools) Color.Transparent else MiuixTheme.colorScheme.surface,
         navigationIcon = {
             if (isHome) {
-                IconButton(onClick = onOpenConversationPane) {
+                IconButton(onClick = onOpenNavPane) {
                     Icon(
                         painter = painterResource(LucideR.drawable.lucide_ic_menu),
-                        contentDescription = "会话历史",
+                        contentDescription = "菜单",
                     )
                 }
             } else {
@@ -127,10 +150,10 @@ private fun AgentTopBar(
         },
         actions = {
             if (isHome) {
-                IconButton(onClick = onNewConversation) {
+                IconButton(onClick = onOpenHistoryPane) {
                     Icon(
-                        painter = painterResource(LucideR.drawable.lucide_ic_message_circle_plus),
-                        contentDescription = "新建对话",
+                        painter = painterResource(LucideR.drawable.lucide_ic_history),
+                        contentDescription = "历史对话",
                     )
                 }
             }

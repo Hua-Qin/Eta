@@ -150,6 +150,28 @@ internal object ToolArgumentContract {
                 maximumLength = 500,
             ),
         ),
+        "workflows_list" to listOf(
+            Field("query", Kind.STRING, maximumLength = 200),
+            Field("limit", Kind.INTEGER, minimum = 1, maximum = 200),
+        ),
+        "workflows_get" to listOf(
+            Field("workflowId", Kind.STRING, required = true, nonBlank = true, maximumLength = 500),
+        ),
+        "workflows_create" to listOf(
+            Field("name", Kind.STRING, required = true, nonBlank = true, maximumLength = 200),
+            Field("description", Kind.STRING, maximumLength = 1000),
+            Field("definition", Kind.STRING, maximumLength = 100_000),
+        ),
+        "workflows_update" to listOf(
+            Field("workflowId", Kind.STRING, required = true, nonBlank = true, maximumLength = 500),
+            Field("definition", Kind.STRING, required = true, nonBlank = true, maximumLength = 100_000),
+        ),
+        "workflows_delete" to listOf(
+            Field("workflowId", Kind.STRING, required = true, nonBlank = true, maximumLength = 500),
+        ),
+        "workflows_run" to listOf(
+            Field("workflowId", Kind.STRING, required = true, nonBlank = true, maximumLength = 500),
+        ),
     )
 
     fun validate(toolName: String, args: JSONObject): Issue? {

@@ -14,6 +14,9 @@ import fuck.andes.agent.overlay.AgentHapticFeedback
 import fuck.andes.agent.overlay.GestureIndicator
 import fuck.andes.agent.runtime.AgentAppContext
 import fuck.andes.agent.skill.SkillCompatibilityChecker
+import fuck.andes.agent.workflow.WorkflowManager
+import fuck.andes.agent.workflow.model.WorkflowDefinition
+import kotlinx.coroutines.runBlocking
 import fuck.andes.agent.skill.SkillIndexService
 import fuck.andes.agent.skill.SkillInstallIntentGate
 import fuck.andes.agent.skill.SkillInstallErrorCode
@@ -147,6 +150,14 @@ internal class AgentLocalTools(
                 "skills_list_curated" -> textResult(skillsListCurated())
                 "skills_inspect_github" -> textResult(skillsInspectGitHub(args))
                 "skills_install_from_github" -> textResult(skillsInstallFromGitHub(args))
+                "workflows_list" -> textResult(workflowsList(args))
+                "workflows_get" -> textResult(workflowsGet(args))
+                "workflows_create" -> textResult(workflowsCreate(args))
+                "workflows_update" -> textResult(workflowsUpdate(args))
+                "workflows_delete" -> textResult(workflowsDelete(args))
+                "workflows_run" -> textResult(workflowsRun(args))
+                "workflows_status" -> textResult(workflowsStatus())
+                "workflows_cancel" -> textResult(workflowsCancel())
                 else -> textResult(
                     errorResult(
                         code = "UNKNOWN_TOOL",
@@ -1183,6 +1194,233 @@ internal class AgentLocalTools(
 
     private fun showSwipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Int) {
         GestureIndicator.showSwipe(context, x1, y1, x2, y2, durationMs)
+    }
+
+    // ==================== Workflow tools ====================
+
+    private fun workflowsList(args: JSONObject): String {
+        val repo = WorkflowManager.getRepository()
+        val query = args.optString("query").trim().lowercase()
+        val limit = args.optInt("limit", 50).coerceIn(1, 200)
+        val workflows = runBlocking { repo.loadAll() }
+            .filter { w ->
+                if (query.isBlank()) true
+                else listOf(w.name, w.description, w.id).any { it.lowercase().contains(query) }
+            }
+            .take(limit)
+        val items = JSONArray()
+        workflows.forEach { w ->
+            items.put(
+                JSONObject()
+                    .put("id", w.id)
+                    .put("name", w.name)
+                    .put("description", w.description)
+                    .put("step_count", w.steps.size)
+            )
+        }
+        return JSONObject()
+            .put("ok", true)
+            .put("count", workflows.size)
+            .put("items", items)
+            .toString()
+    }
+
+    private fun workflowsGet(args: JSONObject): String {
+        val repo = WorkflowManager.getRepository()
+        val workflowId = args.optString("workflowId").trim()
+        if (workflowId.isBlank()) return errorResult("MISSING_PARAM", "缺少 workflowId")
+        val workflow = runBlocking { repo.get(workflowId) }
+            ?: return errorResult("NOT_FOUND", "未找到工作流：$workflowId")
+        val steps = JSONArray()
+        workflow.steps.forEach { step ->
+            steps.put(
+                JSONObject()
+                    .put("id", step.id)
+                    .put("type", step.type.name)
+                    .put("next", step.next ?: JSONObject.NULL)
+            )
+        }
+        return JSONObject()
+            .put("ok", true)
+            .put("id", workflow.id)
+            .put("name", workflow.name)
+            .put("description", workflow.description)
+            .put("steps", steps)
+            .put("step_count", workflow.steps.size)
+            .toString()
+    }
+
+    private fun workflowsCreate(args: JSONObject): String {
+        val repo = WorkflowManager.getRepository()
+        val name = args.optString("name").trim()
+        val description = args.optString("description").trim()
+        val jsonDefinition = args.optString("definition").trim()
+        if (name.isBlank()) return errorResult("MISSING_PARAM", "缺少 name")
+        val workflow = if (jsonDefinition.isNotBlank()) {
+            try {
+                val def = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                    .decodeFromString(WorkflowDefinition.serializer(), jsonDefinition)
+                def.copy(
+                    id = "workflow_${System.currentTimeMillis()}",
+                    name = name.ifBlank { def.name },
+                    description = description.ifBlank { def.description },
+                )
+            } catch (e: Exception) {
+                return errorResult("INVALID_JSON", "工作流定义 JSON 解析失败：${e.message}")
+            }
+        } else {
+            WorkflowDefinition(
+                id = "workflow_${System.currentTimeMillis()}",
+                name = name,
+                description = description,
+                steps = emptyList(),
+            )
+        }
+        runBlocking { repo.save(workflow) }
+        return JSONObject()
+            .put("ok", true)
+            .put("id", workflow.id)
+            .put("name", workflow.name)
+            .put("message", "工作流已创建")
+            .toString()
+    }
+
+    private fun workflowsUpdate(args: JSONObject): String {
+        val repo = WorkflowManager.getRepository()
+        val workflowId = args.optString("workflowId").trim()
+        val jsonDefinition = args.optString("definition").trim()
+        if (workflowId.isBlank()) return errorResult("MISSING_PARAM", "缺少 workflowId")
+        if (jsonDefinition.isBlank()) return errorResult("MISSING_PARAM", "缺少 definition")
+        val existing = runBlocking { repo.get(workflowId) }
+            ?: return errorResult("NOT_FOUND", "未找到工作流：$workflowId")
+        val updated = try {
+            val def = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                .decodeFromString(WorkflowDefinition.serializer(), jsonDefinition)
+            def.copy(id = existing.id)
+        } catch (e: Exception) {
+            return errorResult("INVALID_JSON", "工作流定义 JSON 解析失败：${e.message}")
+        }
+        runBlocking { repo.save(updated) }
+        return JSONObject()
+            .put("ok", true)
+            .put("id", updated.id)
+            .put("name", updated.name)
+            .put("message", "工作流已更新")
+            .toString()
+    }
+
+    private fun workflowsDelete(args: JSONObject): String {
+        val repo = WorkflowManager.getRepository()
+        val workflowId = args.optString("workflowId").trim()
+        if (workflowId.isBlank()) return errorResult("MISSING_PARAM", "缺少 workflowId")
+        val exists = runBlocking { repo.get(workflowId) } != null
+        if (!exists) return errorResult("NOT_FOUND", "未找到工作流：$workflowId")
+        runBlocking { repo.delete(workflowId) }
+        return JSONObject()
+            .put("ok", true)
+            .put("id", workflowId)
+            .put("message", "工作流已删除")
+            .toString()
+    }
+
+    private fun workflowsRun(args: JSONObject): String {
+        val workflowId = args.optString("workflowId").trim()
+        if (workflowId.isBlank()) return errorResult("MISSING_PARAM", "缺少 workflowId")
+        val repo = WorkflowManager.getRepository()
+        val workflow = runBlocking { repo.get(workflowId) }
+            ?: return errorResult("NOT_FOUND", "未找到工作流：$workflowId")
+        val inputs = mutableMapOf<String, String>()
+        args.optJSONObject("inputs")?.let { inputsJson ->
+            for (key in inputsJson.keys()) {
+                inputs[key] = inputsJson.getString(key)
+            }
+        }
+        val toolExecutor: suspend (String, org.json.JSONObject) -> String = { toolName, toolArgs ->
+            execute(
+                AgentModelClient.ToolCall(
+                    id = "workflow_$toolName",
+                    name = toolName,
+                    argumentsJson = toolArgs.toString(),
+                )
+            ).content
+        }
+        val screenObserver: suspend () -> String = {
+            execute(
+                AgentModelClient.ToolCall(
+                    id = "workflow_observe",
+                    name = "observe_screen",
+                    argumentsJson = "{}",
+                )
+            ).content
+        }
+        val screenTextProvider: suspend () -> String = {
+            execute(
+                AgentModelClient.ToolCall(
+                    id = "workflow_observe_text",
+                    name = "observe_screen",
+                    argumentsJson = "{\"include_screenshot\":false,\"include_ui_tree\":true}",
+                )
+            ).content
+        }
+        val stateFlow = WorkflowManager.startWorkflow(
+            definition = workflow,
+            inputs = inputs,
+            toolExecutor = toolExecutor,
+            screenObserver = screenObserver,
+            screenTextProvider = screenTextProvider,
+        )
+        return JSONObject()
+            .put("ok", true)
+            .put("workflowId", workflowId)
+            .put("status", stateFlow.value.status.name)
+            .put("message", "工作流已启动")
+            .toString()
+    }
+
+    private fun workflowsStatus(): String {
+        val stateFlow = WorkflowManager.currentState()
+            ?: return JSONObject()
+                .put("ok", true)
+                .put("running", false)
+                .put("message", "没有运行中的工作流")
+                .toString()
+        val state = stateFlow.value
+        val steps = JSONArray()
+        state.stepStates.forEach { (stepId, stepState) ->
+            steps.put(
+                JSONObject()
+                    .put("step_id", stepId)
+                    .put("status", stepState.status.name)
+            )
+        }
+        val logs = JSONArray()
+        state.logs.takeLast(20).forEach { log ->
+            logs.put(
+                JSONObject()
+                    .put("level", log.level.name)
+                    .put("message", log.message)
+                    .put("timestamp", log.timestamp)
+            )
+        }
+        return JSONObject()
+            .put("ok", true)
+            .put("running", state.status == fuck.andes.agent.workflow.model.RunStatus.RUNNING)
+            .put("status", state.status.name)
+            .put("current_step_id", state.currentStepId ?: JSONObject.NULL)
+            .put("steps", steps)
+            .put("logs", logs)
+            .put("error", state.error ?: JSONObject.NULL)
+            .toString()
+    }
+
+    private fun workflowsCancel(): String {
+        val stateFlow = WorkflowManager.currentState()
+            ?: return errorResult("NO_RUNNING_WORKFLOW", "没有运行中的工作流")
+        WorkflowManager.cancelCurrent()
+        return JSONObject()
+            .put("ok", true)
+            .put("message", "工作流已取消")
+            .toString()
     }
 
     private data class AppInfo(
