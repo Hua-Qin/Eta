@@ -1,5 +1,6 @@
 package fuck.andes.ui.screens.workflows
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -133,15 +134,15 @@ fun WorkflowsScreen(
                                 painter = painterResource(LucideR.drawable.lucide_ic_layout_template),
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = MiuixTheme.colorScheme.onSurfaceVariant,
+                                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                             Text(
                                 text = "还没有工作流",
-                                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                             Text(
                                 text = "点击上方按钮创建第一个工作流",
-                                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                         }
                     }

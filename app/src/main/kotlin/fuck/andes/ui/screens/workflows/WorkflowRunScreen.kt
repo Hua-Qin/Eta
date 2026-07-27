@@ -1,11 +1,13 @@
 package fuck.andes.ui.screens.workflows
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -72,7 +74,7 @@ fun WorkflowRunScreen(
                             )
                             Text(
                                 text = statusText(runState?.status),
-                                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                             )
                         }
                     }
@@ -127,7 +129,7 @@ fun WorkflowRunScreen(
                                     color = when (log.level) {
                                         fuck.andes.agent.workflow.model.LogLevel.ERROR -> MiuixTheme.colorScheme.error
                                         fuck.andes.agent.workflow.model.LogLevel.WARN -> MiuixTheme.colorScheme.primary
-                                        else -> MiuixTheme.colorScheme.onSurfaceVariant
+                                        else -> MiuixTheme.colorScheme.onSurfaceVariantSummary
                                     },
                                 )
                             }
@@ -205,7 +207,7 @@ private fun StatusIcon(status: RunStatus?) {
                 painter = painterResource(LucideR.drawable.lucide_ic_clock),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = MiuixTheme.colorScheme.onSurfaceVariant,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
             RunStatus.RUNNING -> InfiniteProgressIndicator(size = 24.dp)
             RunStatus.COMPLETED -> Icon(
@@ -224,7 +226,7 @@ private fun StatusIcon(status: RunStatus?) {
                 painter = painterResource(LucideR.drawable.lucide_ic_clock),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = MiuixTheme.colorScheme.onSurfaceVariant,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }
     }
@@ -244,7 +246,7 @@ private fun StepStatusIcon(status: StepStatus) {
                 painter = painterResource(LucideR.drawable.lucide_ic_clock),
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = MiuixTheme.colorScheme.onSurfaceVariant,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
             StepStatus.RUNNING -> InfiniteProgressIndicator(size = 20.dp)
             StepStatus.COMPLETED -> Icon(
@@ -263,7 +265,7 @@ private fun StepStatusIcon(status: StepStatus) {
                 painter = painterResource(LucideR.drawable.lucide_ic_arrow_right),
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = MiuixTheme.colorScheme.onSurfaceVariant,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
         }
     }
