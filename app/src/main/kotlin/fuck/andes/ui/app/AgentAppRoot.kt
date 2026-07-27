@@ -68,6 +68,18 @@ import fuck.andes.ui.screens.permissions.PermissionHealthScreen
 import fuck.andes.ui.screens.skills.AgentSkillsScreen
 import fuck.andes.ui.screens.terminal.LinuxEnvironmentScreen
 import fuck.andes.ui.screens.tools.AgentToolsScreen
+import fuck.andes.ui.screens.workflows.WorkflowsScreen
+import fuck.andes.ui.screens.workflows.WorkflowEditorScreen
+import fuck.andes.ui.screens.workflows.WorkflowRunScreen
+import fuck.andes.ui.screens.workflows.WorkflowsAction
+import fuck.andes.ui.screens.workflows.WorkflowEditorAction
+import fuck.andes.ui.screens.workflows.WorkflowRunAction
+import fuck.andes.agent.workflow.WorkflowManager
+import fuck.andes.agent.workflow.model.WorkflowRunState
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 
 /**
  * Agent App 根组件：持有本地导航栈，并把 Screen actions 交给 [AgentAppState]。
@@ -106,8 +118,13 @@ fun AgentAppRoot() {
     var conversationDeleteTarget by remember { mutableStateOf<ConversationSummaryUi?>(null) }
     val focusManager = LocalFocusManager.current
 
+    val workflowRepository = remember { WorkflowManager.getRepository() }
+    val workflows by workflowRepository.workflows.collectAsState(initial = emptyList())
+    var currentWorkflowRunState by remember { mutableStateOf<WorkflowRunState?>(null) }
+
     LaunchedEffect(Unit) {
         RuntimeConfigRepository.ensureDefaults(FuckAndesApp.serviceInstance)
+        workflowRepository.loadAll()
     }
 
     fun pushRoute(
@@ -385,6 +402,112 @@ fun AgentAppRoot() {
                 ModelProviderDetailScreen(
                     newType = route.type,
                     onBack = ::popRoute
+                )
+            }
+            entry<AppRoute.Workflows> {
+                WorkflowsScreen(
+                    workflows = workflows,
+                    onAction = { action ->
+                        when (action) {
+                            WorkflowsAction.NavigateBack -> popRoute()
+                            is WorkflowsAction.CreateNew -> pushRoute(AppRoute.WorkflowEditor())
+                            is WorkflowsAction.Edit -> pushRoute(AppRoute.WorkflowEditor(action.workflowId))
+                            is WorkflowsAction.Run -> pushRoute(AppRoute.WorkflowRun(action.workflowId))
+                            is WorkflowsAction.Delete -> {
+                                coroutineScope.launch {
+                                    workflowRepository.delete(action.workflowId)
+                                }
+                            }
+                            WorkflowsAction.ImportTemplate -> {
+                                coroutineScope.launch {
+                                    val templates = workflowRepository.listTemplateNames()
+                                    if (templates.isNotEmpty()) {
+                                        val template = workflowRepository.loadTemplate(templates.first())
+                                        if (template != null) {
+                                            workflowRepository.save(template.copy(id = "workflow_${System.currentTimeMillis()}"))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                )
+            }
+            entry<AppRoute.WorkflowEditor> { route ->
+                val workflow = remember(route.workflowId) {
+                    route.workflowId?.let { id -> workflows.find { it.id == id } }
+                }
+                WorkflowEditorScreen(
+                    workflow = workflow,
+                    isNew = workflow == null,
+                    onAction = { action ->
+                        when (action) {
+                            WorkflowEditorAction.NavigateBack -> popRoute()
+                            is WorkflowEditorAction.Save -> {
+                                coroutineScope.launch {
+                                    workflowRepository.save(action.definition)
+                                }
+                            }
+                            is WorkflowEditorAction.Run -> {
+                                pushRoute(AppRoute.WorkflowRun(action.workflowId))
+                            }
+                            WorkflowEditorAction.Delete -> {
+                                route.workflowId?.let { id ->
+                                    coroutineScope.launch {
+                                        workflowRepository.delete(id)
+                                        popRoute()
+                                    }
+                                }
+                            }
+                        }
+                    },
+                )
+            }
+            entry<AppRoute.WorkflowRun> { route ->
+                val workflow = remember(route.workflowId) {
+                    workflows.find { it.id == route.workflowId }
+                }
+                LaunchedEffect(route.workflowId) {
+                    val def = workflow ?: workflowRepository.get(route.workflowId)
+                    if (def != null) {
+                        val stateFlow = WorkflowManager.startWorkflow(
+                            definition = def,
+                            toolExecutor = { _, _ -> "not implemented" },
+                            screenObserver = { "not implemented" },
+                            screenTextProvider = { "not implemented" },
+                        )
+                        stateFlow.collectLatest { state ->
+                            currentWorkflowRunState = state
+                        }
+                    }
+                }
+                WorkflowRunScreen(
+                    workflow = workflow,
+                    runState = currentWorkflowRunState,
+                    onAction = { action ->
+                        when (action) {
+                            WorkflowRunAction.NavigateBack -> popRoute()
+                            WorkflowRunAction.Cancel -> {
+                                WorkflowManager.cancelCurrent()
+                            }
+                            WorkflowRunAction.Restart -> {
+                                coroutineScope.launch {
+                                    val def = workflow ?: workflowRepository.get(route.workflowId)
+                                    if (def != null) {
+                                        val stateFlow = WorkflowManager.startWorkflow(
+                                            definition = def,
+                                            toolExecutor = { _, _ -> "not implemented" },
+                                            screenObserver = { "not implemented" },
+                                            screenTextProvider = { "not implemented" },
+                                        )
+                                        stateFlow.collectLatest { state ->
+                                            currentWorkflowRunState = state
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                 )
             }
         }

@@ -1,0 +1,29 @@
+{
+  "id": "open_app_observe",
+  "name": "打开应用并观察",
+  "description": "打开指定应用后观察当前屏幕状态",
+  "trigger": "manual",
+  "inputs": [
+    { "name": "package_name", "label": "应用包名", "type": "text", "default": "com.tencent.mm" }
+  ],
+  "steps": [
+    {
+      "id": "launch_app",
+      "type": "tool",
+      "tool": "launch_app",
+      "params": { "package_name": "{package_name}" },
+      "next": "wait_load"
+    },
+    {
+      "id": "wait_load",
+      "type": "tool",
+      "tool": "wait",
+      "params": { "duration_ms": "2000" },
+      "next": "observe_screen"
+    },
+    {
+      "id": "observe_screen",
+      "type": "observe"
+    }
+  ]
+}

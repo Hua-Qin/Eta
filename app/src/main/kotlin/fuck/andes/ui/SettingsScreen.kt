@@ -225,6 +225,18 @@ internal fun SettingsScreen(
                         },
                         onClick = { onNavigate(AppRoute.ModelProviders) },
                     )
+                    PrefDivider()
+                    ArrowPreference(
+                        title = "工作流管理",
+                        summary = "创建和管理 JSON 工作流，自动化任务编排",
+                        startAction = {
+                            TintedIcon(
+                                icon = LucideR.drawable.lucide_ic_workflow,
+                                tint = ColorOSRoyalBlue,
+                            )
+                        },
+                        onClick = { onNavigate(AppRoute.Workflows) },
+                    )
                 }
             }
 

@@ -8,6 +8,7 @@ sealed interface AppRoute : NavKey {
     data object Browser : AppRoute
     data object Tools : AppRoute
     data object Skills : AppRoute
+    data object Workflows : AppRoute
     data object Permissions : AppRoute
     data object SystemEnhance : AppRoute
     data object Settings : AppRoute
@@ -15,6 +16,8 @@ sealed interface AppRoute : NavKey {
     data object ModelProviders : AppRoute
     data class ModelProviderDetail(val providerId: String) : AppRoute
     data class ModelProviderNew(val type: NewProviderType) : AppRoute
+    data class WorkflowEditor(val workflowId: String? = null) : AppRoute
+    data class WorkflowRun(val workflowId: String) : AppRoute
 }
 
 enum class NewProviderType { OpenAiCompatible, Anthropic }

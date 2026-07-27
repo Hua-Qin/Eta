@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.Handler
 import android.os.Looper
 import fuck.andes.agent.skill.SkillRuntime
+import fuck.andes.agent.workflow.WorkflowManager
 import fuck.andes.core.AndroidAgentLogger
 import fuck.andes.core.safeLogType
 import fuck.andes.data.datastore.SettingsDataStore
@@ -36,6 +37,7 @@ class FuckAndesApp : Application(), XposedServiceHelper.OnServiceListener {
         super.onCreate()
         SettingsDataStore.init(this)
         ProviderRepository.init(this)
+        WorkflowManager.init(this)
         XposedServiceHelper.registerListener(this)
         applicationScope.launch {
             runCatching {
