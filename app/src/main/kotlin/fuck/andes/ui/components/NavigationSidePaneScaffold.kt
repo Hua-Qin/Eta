@@ -398,7 +398,7 @@ private fun QuickActionItem(
         Text(
             text = label,
             color = MiuixTheme.colorScheme.onSurface,
-            style = MiuixTheme.textStyles.footnote,
+            style = MiuixTheme.textStyles.footnote1,
             fontWeight = FontWeight.Medium,
         )
     }
