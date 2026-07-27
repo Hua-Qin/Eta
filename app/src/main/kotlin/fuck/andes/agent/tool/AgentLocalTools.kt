@@ -1202,7 +1202,8 @@ internal class AgentLocalTools(
         val repo = WorkflowManager.getRepository()
         val query = args.optString("query").trim().lowercase()
         val limit = args.optInt("limit", 50).coerceIn(1, 200)
-        val workflows = runBlocking { repo.loadAll() }
+        runBlocking { repo.loadAll() }
+        val workflows = repo.workflows.value
             .filter { w ->
                 if (query.isBlank()) true
                 else listOf(w.name, w.description, w.id).any { it.lowercase().contains(query) }

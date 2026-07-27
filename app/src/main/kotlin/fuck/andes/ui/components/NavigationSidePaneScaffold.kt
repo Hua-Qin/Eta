@@ -317,7 +317,7 @@ private fun PaneHeader() {
             Text(
                 text = "移动数据",
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                style = MiuixTheme.textStyles.footnote,
+                style = MiuixTheme.textStyles.footnote1,
                 fontWeight = FontWeight.Medium,
             )
         }
@@ -389,7 +389,7 @@ private fun QuickActionItem(
                 Text(
                     text = badge,
                     color = MiuixTheme.colorScheme.onPrimaryContainer,
-                    style = MiuixTheme.textStyles.caption2,
+                    style = MiuixTheme.textStyles.footnote2,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -491,7 +491,7 @@ private fun PaneDock(
             onClick = onOpenAbout,
         )
         DockButton(
-            icon = LucideR.drawable.lucide_ic_help_circle,
+            icon = LucideR.drawable.lucide_ic_book_open_text,
             label = "使用手册",
             onClick = onOpenHelp,
         )
@@ -523,7 +523,7 @@ private fun DockButton(
         Text(
             text = label,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-            style = MiuixTheme.textStyles.caption2,
+            style = MiuixTheme.textStyles.footnote2,
             fontWeight = FontWeight.Medium,
         )
     }

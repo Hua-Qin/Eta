@@ -161,8 +161,8 @@ fun AgentAppRoot() {
         navPaneOpen = false
         when (destination) {
             NavDestination.CHAT -> {
-                if (navigator.current !is AppRoute.Home) {
-                    while (navigator.current !is AppRoute.Home) {
+                if (navigator.current() !is AppRoute.Home) {
+                    while (navigator.current() !is AppRoute.Home) {
                         navigator.pop()
                     }
                 }
