@@ -1,7 +1,7 @@
 package fuck.andes.ui.screens.workflows
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,36 +9,27 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.composables.icons.lucide.R as LucideR
 import fuck.andes.agent.workflow.model.RunStatus
 import fuck.andes.agent.workflow.model.StepStatus
 import fuck.andes.agent.workflow.model.WorkflowDefinition
-import fuck.andes.agent.workflow.model.WorkflowLogEntry
 import fuck.andes.agent.workflow.model.WorkflowRunState
 import fuck.andes.ui.components.MiuixScaffoldPage
-import fuck.andes.ui.components.SectionHeader
+import fuck.andes.ui.components.PrefDivider
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 sealed interface WorkflowRunAction {
@@ -54,175 +45,133 @@ fun WorkflowRunScreen(
     onAction: (WorkflowRunAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val steps = workflow?.steps ?: emptyList()
+    val isFinished = runState?.status.let { it == RunStatus.COMPLETED || it == RunStatus.FAILED || it == RunStatus.CANCELLED }
 
     MiuixScaffoldPage(
-        title = "运行中",
+        title = "工作流运行",
         onBack = { onAction(WorkflowRunAction.NavigateBack) },
         modifier = modifier,
-        actions = {
-            if (runState?.status == RunStatus.RUNNING) {
-                IconButton(onClick = { onAction(WorkflowRunAction.Cancel) }) {
-                    Icon(
-                        painter = painterResource(LucideR.drawable.lucide_ic_square),
-                        contentDescription = "停止",
-                        tint = MiuixTheme.colorScheme.error,
-                    )
-                }
-            }
-            if (runState?.status == RunStatus.COMPLETED || runState?.status == RunStatus.FAILED || runState?.status == RunStatus.CANCELLED) {
-                IconButton(onClick = { onAction(WorkflowRunAction.Restart) }) {
-                    Icon(
-                        painter = painterResource(LucideR.drawable.lucide_ic_rotate_cw),
-                        contentDescription = "重新运行",
-                        tint = MiuixTheme.colorScheme.primary,
-                    )
-                }
-            }
-        },
     ) {
-        item(key = "status_card") {
+        item(key = "status-title") { SmallTitle("运行状态") }
+        item(key = "status-card") {
             Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 12.dp),
             ) {
-                Row(
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        StatusIcon(status = runState?.status)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = workflow?.name ?: "工作流",
+                            )
+                            Text(
+                                text = statusText(runState?.status),
+                                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    if (runState?.error != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "错误: ${runState.error}",
+                            color = MiuixTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+        }
+
+        if (runState != null && workflow != null) {
+            item(key = "steps-title") { SmallTitle("步骤 (${workflow.steps.size})") }
+            item(key = "steps-card") {
+                Card(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 12.dp),
+                ) {
+                    workflow.steps.forEachIndexed { index, step ->
+                        val stepState = runState.stepStates[step.id]
+                        StepItem(
+                            stepName = step.type.name,
+                            stepId = step.id,
+                            status = stepState?.status ?: StepStatus.PENDING,
+                        )
+                        if (index < workflow.steps.lastIndex) PrefDivider()
+                    }
+                }
+            }
+
+            if (runState.logs.isNotEmpty()) {
+                item(key = "logs-title") { SmallTitle("日志") }
+                item(key = "logs-card") {
+                    Card(
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            runState.logs.takeLast(50).forEach { log ->
+                                Text(
+                                    text = log.message,
+                                    color = when (log.level) {
+                                        fuck.andes.agent.workflow.model.LogLevel.ERROR -> MiuixTheme.colorScheme.error
+                                        fuck.andes.agent.workflow.model.LogLevel.WARN -> MiuixTheme.colorScheme.primary
+                                        else -> MiuixTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item(key = "actions-card") {
+            Card(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 12.dp),
+            ) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    val statusColor = when (runState?.status) {
-                        RunStatus.RUNNING -> MiuixTheme.colorScheme.primary
-                        RunStatus.COMPLETED -> MiuixTheme.colorScheme.primary
-                        RunStatus.FAILED -> MiuixTheme.colorScheme.error
-                        RunStatus.CANCELLED -> MiuixTheme.colorScheme.onSurfaceVariant
-                        else -> MiuixTheme.colorScheme.onSurfaceVariant
-                    }
-                    val statusText = when (runState?.status) {
-                        RunStatus.RUNNING -> "运行中"
-                        RunStatus.COMPLETED -> "已完成"
-                        RunStatus.FAILED -> "失败"
-                        RunStatus.CANCELLED -> "已取消"
-                        RunStatus.PAUSED -> "已暂停"
-                        else -> "等待中"
-                    }
-                    Icon(
-                        painter = painterResource(LucideR.drawable.lucide_ic_activity),
-                        contentDescription = null,
-                        tint = statusColor,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .background(
-                                statusColor.copy(alpha = 0.15f),
-                                CircleShape,
-                            )
-                            .padding(6.dp),
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(workflow?.name ?: "工作流", style = MiuixTheme.typography.title3)
-                        Text(
-                            statusText,
-                            color = statusColor,
-                            style = MiuixTheme.typography.callout,
-                        )
-                    }
-                    val completed = runState?.stepStates?.values?.count {
-                        it.status == StepStatus.COMPLETED || it.status == StepStatus.FAILED
-                    } ?: 0
-                    Text(
-                        "$completed / ${steps.size}",
-                        color = MiuixTheme.colorScheme.onSurfaceVariant,
-                        style = MiuixTheme.typography.title3,
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.size(12.dp))
-        }
-
-        item(key = "section_steps") {
-            SectionHeader("步骤")
-        }
-
-        item(key = "steps_card") {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-            ) {
-                steps.forEachIndexed { index, step ->
-                    val stepState = runState?.stepStates?.get(step.id)
-                    val isCurrent = runState?.currentStepId == step.id
-                    StepRow(
-                        index = index + 1,
-                        stepId = step.id,
-                        stepType = step.type.name,
-                        status = stepState?.status ?: StepStatus.PENDING,
-                        isCurrent = isCurrent,
-                        error = stepState?.error,
-                    )
-                    if (index < steps.size - 1) {
-                        Spacer(modifier = Modifier.size(4.dp))
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.size(12.dp))
-        }
-
-        item(key = "section_logs") {
-            SectionHeader("日志")
-        }
-
-        item(key = "logs_card") {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-            ) {
-                val logs = runState?.logs ?: emptyList()
-                if (logs.isEmpty()) {
-                    Text(
-                        "暂无日志",
-                        modifier = Modifier.padding(24.dp),
-                        color = MiuixTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        logs.takeLast(50).forEach { log ->
-                            LogRow(log = log)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Button(
+                            onClick = { onAction(WorkflowRunAction.Restart) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColorsPrimary(),
+                            enabled = isFinished,
+                        ) {
+                            Text("重新运行")
                         }
-                    }
-                }
-            }
-        }
-
-        if (runState?.error != null) {
-            item(key = "error_card") {
-                Spacer(modifier = Modifier.size(12.dp))
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(LucideR.drawable.lucide_ic_alert_circle),
-                                contentDescription = null,
-                                tint = MiuixTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("错误", style = MiuixTheme.typography.title3)
+                        Button(
+                            onClick = { onAction(WorkflowRunAction.Cancel) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColorsPrimary(
+                                color = MiuixTheme.colorScheme.error,
+                                contentColor = MiuixTheme.colorScheme.onError,
+                            ),
+                            enabled = !isFinished,
+                        ) {
+                            Text("停止")
                         }
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text(
-                            runState.error ?: "",
-                            color = MiuixTheme.colorScheme.error,
-                            style = MiuixTheme.typography.callout,
-                        )
                     }
                 }
             }
@@ -231,113 +180,101 @@ fun WorkflowRunScreen(
 }
 
 @Composable
-private fun StepRow(
-    index: Int,
+private fun StepItem(
+    stepName: String,
     stepId: String,
-    stepType: String,
     status: StepStatus,
-    isCurrent: Boolean,
-    error: String?,
 ) {
-    val statusColor = when (status) {
-        StepStatus.COMPLETED -> MiuixTheme.colorScheme.primary
-        StepStatus.RUNNING -> MiuixTheme.colorScheme.primary
-        StepStatus.FAILED -> MiuixTheme.colorScheme.error
-        StepStatus.SKIPPED -> MiuixTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-        StepStatus.PENDING -> MiuixTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-    }
+    BasicComponent(
+        title = stepName,
+        summary = stepId,
+        startAction = {
+            StepStatusIcon(status = status)
+        },
+    )
+}
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+@Composable
+private fun StatusIcon(status: RunStatus?) {
+    Box(
+        modifier = Modifier.size(36.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = String.format("%02d", index),
-            color = statusColor,
-            style = MiuixTheme.typography.title3,
-            modifier = Modifier.width(32.dp),
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(stepId, style = MiuixTheme.typography.callout)
-            Text(
-                stepType,
-                color = MiuixTheme.colorScheme.onSurfaceVariant,
-                style = MiuixTheme.typography.caption1,
-            )
-            if (error != null) {
-                Text(
-                    error,
-                    color = MiuixTheme.colorScheme.error,
-                    style = MiuixTheme.typography.caption1,
-                )
-            }
-        }
         when (status) {
-            StepStatus.COMPLETED -> Icon(
-                painter = painterResource(LucideR.drawable.lucide_ic_check_circle),
-                contentDescription = "已完成",
-                tint = MiuixTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
+            RunStatus.IDLE, RunStatus.PAUSED -> Icon(
+                painter = painterResource(LucideR.drawable.lucide_ic_clock),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MiuixTheme.colorScheme.onSurfaceVariant,
             )
-            StepStatus.RUNNING -> Icon(
-                painter = painterResource(LucideR.drawable.lucide_ic_loader),
-                contentDescription = "运行中",
+            RunStatus.RUNNING -> InfiniteProgressIndicator(size = 24.dp)
+            RunStatus.COMPLETED -> Icon(
+                painter = painterResource(LucideR.drawable.lucide_ic_check),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
                 tint = MiuixTheme.colorScheme.primary,
+            )
+            RunStatus.FAILED, RunStatus.CANCELLED -> Icon(
+                painter = painterResource(LucideR.drawable.lucide_ic_x),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MiuixTheme.colorScheme.error,
+            )
+            null -> Icon(
+                painter = painterResource(LucideR.drawable.lucide_ic_clock),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MiuixTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StepStatusIcon(status: StepStatus) {
+    Box(
+        modifier = Modifier
+            .padding(end = 12.dp)
+            .size(36.dp)
+            .background(MiuixTheme.colorScheme.surfaceContainerHigh, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        when (status) {
+            StepStatus.PENDING -> Icon(
+                painter = painterResource(LucideR.drawable.lucide_ic_clock),
+                contentDescription = null,
                 modifier = Modifier.size(20.dp),
+                tint = MiuixTheme.colorScheme.onSurfaceVariant,
+            )
+            StepStatus.RUNNING -> InfiniteProgressIndicator(size = 20.dp)
+            StepStatus.COMPLETED -> Icon(
+                painter = painterResource(LucideR.drawable.lucide_ic_check),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MiuixTheme.colorScheme.primary,
             )
             StepStatus.FAILED -> Icon(
-                painter = painterResource(LucideR.drawable.lucide_ic_x_circle),
-                contentDescription = "失败",
-                tint = MiuixTheme.colorScheme.error,
+                painter = painterResource(LucideR.drawable.lucide_ic_x),
+                contentDescription = null,
                 modifier = Modifier.size(20.dp),
+                tint = MiuixTheme.colorScheme.error,
             )
             StepStatus.SKIPPED -> Icon(
-                painter = painterResource(LucideR.drawable.lucide_ic_skip_forward),
-                contentDescription = "已跳过",
-                tint = MiuixTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                painter = painterResource(LucideR.drawable.lucide_ic_arrow_right),
+                contentDescription = null,
                 modifier = Modifier.size(20.dp),
-            )
-            StepStatus.PENDING -> Icon(
-                painter = painterResource(LucideR.drawable.lucide_ic_circle),
-                contentDescription = "等待中",
-                tint = MiuixTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                modifier = Modifier.size(20.dp),
+                tint = MiuixTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
-@Composable
-private fun LogRow(log: WorkflowLogEntry) {
-    val color = when (log.level) {
-        fuck.andes.agent.workflow.model.LogLevel.ERROR -> MiuixTheme.colorScheme.error
-        fuck.andes.agent.workflow.model.LogLevel.WARN -> MiuixTheme.colorScheme.primary
-        else -> MiuixTheme.colorScheme.onSurfaceVariant
-    }
-    val time = remember(log.timestamp) {
-        val ms = log.timestamp % 1000
-        val totalSecs = log.timestamp / 1000
-        val secs = totalSecs % 60
-        val mins = (totalSecs / 60) % 60
-        val hrs = totalSecs / 3600 % 24
-        String.format("%02d:%02d:%02d.%03d", hrs, mins, secs, ms.toInt())
-    }
-    Row(modifier = Modifier.padding(vertical = 2.dp)) {
-        Text(
-            time,
-            color = MiuixTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 11.sp,
-            modifier = Modifier.width(90.dp),
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            log.message,
-            color = color,
-            fontSize = 12.sp,
-            modifier = Modifier.weight(1f),
-        )
-    }
+private fun statusText(status: RunStatus?): String = when (status) {
+    RunStatus.IDLE -> "空闲"
+    RunStatus.RUNNING -> "运行中"
+    RunStatus.PAUSED -> "已暂停"
+    RunStatus.COMPLETED -> "已完成"
+    RunStatus.FAILED -> "失败"
+    RunStatus.CANCELLED -> "已取消"
+    null -> "未知"
 }

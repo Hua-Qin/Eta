@@ -152,5 +152,8 @@ private fun titleForRoute(route: AppRoute?): String = when (route) {
     is AppRoute.ModelProviders -> "模型提供商"
     is AppRoute.ModelProviderDetail -> route.providerId.let { "Provider 详情" }
     is AppRoute.ModelProviderNew -> "新建提供商"
+    is AppRoute.Workflows -> "工作流管理"
+    is AppRoute.WorkflowEditor -> if (route.workflowId != null) "编辑工作流" else "新建工作流"
+    is AppRoute.WorkflowRun -> "工作流运行"
     null -> "Eta"
 }

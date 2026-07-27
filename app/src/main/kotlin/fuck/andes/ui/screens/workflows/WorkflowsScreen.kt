@@ -1,6 +1,7 @@
 package fuck.andes.ui.screens.workflows
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +23,7 @@ import com.composables.icons.lucide.R as LucideR
 import fuck.andes.agent.workflow.model.WorkflowDefinition
 import fuck.andes.ui.components.MiuixScaffoldPage
 import fuck.andes.ui.components.PrefDivider
-import fuck.andes.ui.components.SectionHeader
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -34,16 +35,13 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
-private val CardHorizontalPadding = 12.dp
-private val CardBottomPadding = 12.dp
-
 sealed interface WorkflowsAction {
     data object NavigateBack : WorkflowsAction
-    data class CreateNew(val template: String? = null) : WorkflowsAction
+    data object CreateNew : WorkflowsAction
+    data object ImportTemplate : WorkflowsAction
     data class Edit(val workflowId: String) : WorkflowsAction
     data class Run(val workflowId: String) : WorkflowsAction
     data class Delete(val workflowId: String) : WorkflowsAction
-    data object ImportTemplate : WorkflowsAction
 }
 
 @Composable
@@ -55,54 +53,52 @@ fun WorkflowsScreen(
     var deleteTarget by remember { mutableStateOf<WorkflowDefinition?>(null) }
 
     MiuixScaffoldPage(
-        title = "工作流",
+        title = "工作流管理",
         onBack = { onAction(WorkflowsAction.NavigateBack) },
         modifier = modifier,
         actions = {
-            IconButton(onClick = { onAction(WorkflowsAction.CreateNew()) }) {
+            IconButton(onClick = { onAction(WorkflowsAction.CreateNew) }) {
                 Icon(
                     painter = painterResource(LucideR.drawable.lucide_ic_plus),
-                    contentDescription = "新建",
+                    contentDescription = "新建工作流",
                 )
             }
         },
     ) {
-        item(key = "section_user") {
-            SectionHeader("我的工作流")
+        item(key = "actions-title") { SmallTitle("操作") }
+        item(key = "actions-card") {
+            Card(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = 12.dp),
+            ) {
+                BasicComponent(
+                    title = "新建工作流",
+                    summary = "创建一个新的 JSON 工作流",
+                    startAction = {
+                        WorkflowIcon(LucideR.drawable.lucide_ic_plus)
+                    },
+                    onClick = { onAction(WorkflowsAction.CreateNew) },
+                )
+                PrefDivider()
+                BasicComponent(
+                    title = "从模板创建",
+                    summary = "使用内置模板快速开始",
+                    startAction = {
+                        WorkflowIcon(LucideR.drawable.lucide_ic_layout_template)
+                    },
+                    onClick = { onAction(WorkflowsAction.ImportTemplate) },
+                )
+            }
         }
 
-        if (workflows.isEmpty()) {
-            item(key = "empty_state") {
+        if (workflows.isNotEmpty()) {
+            item(key = "list-title") { SmallTitle("我的工作流 (${workflows.size})") }
+            item(key = "list-card") {
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = CardHorizontalPadding),
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp, horizontal = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = "还没有工作流",
-                            color = MiuixTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.size(16.dp))
-                        Button(
-                            onClick = { onAction(WorkflowsAction.CreateNew()) },
-                        ) {
-                            Text("新建工作流")
-                        }
-                    }
-                }
-            }
-        } else {
-            item(key = "workflows_list") {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = CardHorizontalPadding),
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 12.dp),
                 ) {
                     workflows.forEachIndexed { index, workflow ->
                         WorkflowItem(
@@ -111,94 +107,79 @@ fun WorkflowsScreen(
                             onRun = { onAction(WorkflowsAction.Run(workflow.id)) },
                             onDelete = { deleteTarget = workflow },
                         )
-                        if (index < workflows.size - 1) {
-                            PrefDivider(startIndent = 56.dp)
-                        }
+                        if (index < workflows.lastIndex) PrefDivider()
                     }
                 }
-                Spacer(modifier = Modifier.size(CardBottomPadding))
             }
-        }
-
-        item(key = "section_templates") {
-            SectionHeader("模板")
-        }
-
-        item(key = "templates_card") {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = CardHorizontalPadding),
-            ) {
-                Row(
+        } else {
+            item(key = "empty-title") { SmallTitle("暂无工作流") }
+            item(key = "empty-hint") {
+                Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp, horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .padding(horizontal = 12.dp)
+                        .padding(bottom = 12.dp),
                 ) {
-                    Icon(
-                        painter = painterResource(LucideR.drawable.lucide_ic_layout_template),
-                        contentDescription = null,
-                        tint = MiuixTheme.colorScheme.primary,
+                    Box(
                         modifier = Modifier
-                            .size(32.dp)
-                            .background(
-                                MiuixTheme.colorScheme.primaryContainer,
-                                CircleShape,
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                painter = painterResource(LucideR.drawable.lucide_ic_layout_template),
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MiuixTheme.colorScheme.onSurfaceVariant,
                             )
-                            .padding(6.dp),
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("从模板创建", style = MiuixTheme.typography.title3)
-                        Text(
-                            "使用预置模板快速开始",
-                            color = MiuixTheme.colorScheme.onSurfaceVariant,
-                            style = MiuixTheme.typography.callout,
-                        )
-                    }
-                    TextButton(onClick = { onAction(WorkflowsAction.ImportTemplate) }) {
-                        Text("查看")
+                            Text(
+                                text = "还没有工作流",
+                                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = "点击上方按钮创建第一个工作流",
+                                color = MiuixTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    if (deleteTarget != null) {
-        WindowDialog(onDismissRequest = { deleteTarget = null }) {
+    deleteTarget?.let { workflow ->
+        WindowDialog(
+            show = true,
+            title = "删除工作流？",
+            summary = "删除「${workflow.name}」后无法恢复。",
+            onDismissRequest = { deleteTarget = null },
+        ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("删除工作流", style = MiuixTheme.typography.title2)
-                Spacer(modifier = Modifier.size(12.dp))
-                Text(
-                    "确定要删除「${deleteTarget?.name}」吗？此操作不可撤销。",
-                    color = MiuixTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.size(24.dp))
-                Row(
+                Button(
+                    onClick = {
+                        onAction(WorkflowsAction.Delete(workflow.id))
+                        deleteTarget = null
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    colors = ButtonDefaults.buttonColorsPrimary(
+                        color = MiuixTheme.colorScheme.error,
+                        contentColor = MiuixTheme.colorScheme.onError,
+                    ),
                 ) {
-                    TextButton(onClick = { deleteTarget = null }) {
-                        Text("取消")
-                    }
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Button(
-                        onClick = {
-                            deleteTarget?.let { onAction(WorkflowsAction.Delete(it.id)) }
-                            deleteTarget = null
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MiuixTheme.colorScheme.error,
-                        ),
-                    ) {
-                        Text("删除")
-                    }
+                    Text("删除")
                 }
+                TextButton(
+                    text = "取消",
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { deleteTarget = null },
+                )
             }
         }
     }
@@ -211,62 +192,68 @@ private fun WorkflowItem(
     onRun: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            painter = painterResource(LucideR.drawable.lucide_ic_workflow),
-            contentDescription = null,
-            tint = MiuixTheme.colorScheme.primary,
-            modifier = Modifier
-                .size(32.dp)
-                .background(
-                    MiuixTheme.colorScheme.primaryContainer,
-                    CircleShape,
-                )
-                .padding(6.dp),
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(workflow.name, style = MiuixTheme.typography.title3)
-            if (workflow.description.isNotBlank()) {
-                Spacer(modifier = Modifier.size(2.dp))
-                Text(
-                    workflow.description,
-                    color = MiuixTheme.colorScheme.onSurfaceVariant,
-                    style = MiuixTheme.typography.callout,
-                    maxLines = 1,
+    BasicComponent(
+        title = workflow.name,
+        summary = workflow.description.ifBlank { "无描述" },
+        startAction = {
+            WorkflowIcon(LucideR.drawable.lucide_ic_layout_template)
+        },
+        endActions = {
+            IconButton(
+                onClick = onRun,
+                minWidth = 36.dp,
+                minHeight = 36.dp,
+            ) {
+                Icon(
+                    painter = painterResource(LucideR.drawable.lucide_ic_play),
+                    contentDescription = "运行",
+                    modifier = Modifier.size(20.dp),
+                    tint = MiuixTheme.colorScheme.primary,
                 )
             }
-            Spacer(modifier = Modifier.size(2.dp))
-            Text(
-                "${workflow.steps.size} 个步骤",
-                color = MiuixTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                style = MiuixTheme.typography.caption1,
-            )
-        }
-        IconButton(onClick = onRun) {
-            Icon(
-                painter = painterResource(LucideR.drawable.lucide_ic_play),
-                contentDescription = "运行",
-                tint = MiuixTheme.colorScheme.primary,
-            )
-        }
-        IconButton(onClick = onEdit) {
-            Icon(
-                painter = painterResource(LucideR.drawable.lucide_ic_pencil),
-                contentDescription = "编辑",
-            )
-        }
-        IconButton(onClick = onDelete) {
-            Icon(
-                painter = painterResource(LucideR.drawable.lucide_ic_trash_2),
-                contentDescription = "删除",
-                tint = MiuixTheme.colorScheme.error,
-            )
-        }
+            Spacer(modifier = Modifier.width(4.dp))
+            IconButton(
+                onClick = onEdit,
+                minWidth = 36.dp,
+                minHeight = 36.dp,
+            ) {
+                Icon(
+                    painter = painterResource(LucideR.drawable.lucide_ic_pencil),
+                    contentDescription = "编辑",
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+            IconButton(
+                onClick = onDelete,
+                minWidth = 36.dp,
+                minHeight = 36.dp,
+            ) {
+                Icon(
+                    painter = painterResource(LucideR.drawable.lucide_ic_trash_2),
+                    contentDescription = "删除",
+                    modifier = Modifier.size(20.dp),
+                    tint = MiuixTheme.colorScheme.error,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun WorkflowIcon(iconRes: Int) {
+    Box(
+        modifier = Modifier
+            .padding(end = 12.dp)
+            .size(36.dp)
+            .background(MiuixTheme.colorScheme.surfaceContainerHigh, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = MiuixTheme.colorScheme.onBackground,
+        )
     }
 }
