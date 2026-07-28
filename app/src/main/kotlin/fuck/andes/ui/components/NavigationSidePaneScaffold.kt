@@ -73,7 +73,8 @@ private object NavDrawerMetrics {
     val RowHorizontalPadding = 16.dp
     val RowVerticalPadding = 12.dp
     val QuickActionIconSize = 28.dp
-    val QuickActionBadgeSize = 20.dp
+    val QuickActionBadgeMinWidth = 20.dp
+    val QuickActionBadgeHeight = 20.dp
     val DockIconSize = 22.dp
     val ListBottomPadding = 20.dp
     val BottomInset = 12.dp
@@ -380,10 +381,12 @@ private fun QuickActionItem(
             )
             Box(
                 modifier = Modifier
-                    .offset(x = 8.dp, y = (-4).dp)
-                    .size(NavDrawerMetrics.QuickActionBadgeSize)
-                    .clip(CircleShape)
-                    .background(MiuixTheme.colorScheme.primaryContainer),
+                    .offset(x = 12.dp, y = (-6).dp)
+                    .defaultMinSize(minWidth = NavDrawerMetrics.QuickActionBadgeMinWidth)
+                    .height(NavDrawerMetrics.QuickActionBadgeHeight)
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(MiuixTheme.colorScheme.primaryContainer)
+                    .padding(horizontal = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(

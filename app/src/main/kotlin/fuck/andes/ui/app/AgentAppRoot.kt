@@ -210,7 +210,7 @@ fun AgentAppRoot() {
             onOpenHelp = { },
             workflowCount = workflows.size,
             packageCount = 0,
-            permissionStatus = "正常",
+            permissionStatus = if (agentState.permissionHealthState.items.any { it.id == "root" && it.status == fuck.andes.ui.model.PermissionStatusUi.Available }) "正常" else "异常",
         ) { padding ->
             Box(
                 modifier = Modifier
