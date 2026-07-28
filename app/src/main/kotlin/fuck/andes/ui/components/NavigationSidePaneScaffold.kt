@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -382,7 +383,7 @@ private fun QuickActionItem(
             Box(
                 modifier = Modifier
                     .offset(x = 12.dp, y = (-6).dp)
-                    .defaultMinSize(minWidth = NavDrawerMetrics.QuickActionBadgeMinWidth)
+                    .widthIn(min = NavDrawerMetrics.QuickActionBadgeMinWidth)
                     .height(NavDrawerMetrics.QuickActionBadgeHeight)
                     .clip(RoundedCornerShape(percent = 50))
                     .background(MiuixTheme.colorScheme.primaryContainer)
