@@ -149,13 +149,11 @@ private fun AgentTopBar(
             }
         },
         actions = {
-            if (isHome) {
-                IconButton(onClick = onOpenHistoryPane) {
-                    Icon(
-                        painter = painterResource(LucideR.drawable.lucide_ic_history),
-                        contentDescription = "历史对话",
-                    )
-                }
+            IconButton(onClick = onOpenHistoryPane) {
+                Icon(
+                    painter = painterResource(LucideR.drawable.lucide_ic_history),
+                    contentDescription = "历史对话",
+                )
             }
         },
     )

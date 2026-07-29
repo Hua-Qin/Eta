@@ -135,21 +135,31 @@ fun NavigationSidePaneScaffold(
             BackHandler(onBack = onDismiss)
         }
 
-        NavigationPanePanel(
-            currentDestination = currentDestination,
-            width = paneWidth,
-            onNavigate = { dest ->
-                onNavigate(dest)
-                onDismiss()
-            },
-            onOpenSettings = onOpenSettings,
-            onOpenAbout = onOpenAbout,
-            onOpenHelp = onOpenHelp,
-            workflowCount = workflowCount,
-            packageCount = packageCount,
-            permissionStatus = permissionStatus,
-            modifier = Modifier.zIndex(0f),
-        )
+        // Navigation panel - only visible when progress > 0
+        Box(
+            modifier = Modifier
+                .width(paneWidth)
+                .fillMaxHeight()
+                .offset { IntOffset((offsetPx - paneWidthPx).roundToInt(), 0) }
+                .zIndex(0f),
+        ) {
+            if (progress > 0.01f) {
+                NavigationPanePanel(
+                    currentDestination = currentDestination,
+                    width = paneWidth,
+                    onNavigate = { dest ->
+                        onNavigate(dest)
+                        onDismiss()
+                    },
+                    onOpenSettings = onOpenSettings,
+                    onOpenAbout = onOpenAbout,
+                    onOpenHelp = onOpenHelp,
+                    workflowCount = workflowCount,
+                    packageCount = packageCount,
+                    permissionStatus = permissionStatus,
+                )
+            }
+        }
 
         Box(
             modifier = Modifier

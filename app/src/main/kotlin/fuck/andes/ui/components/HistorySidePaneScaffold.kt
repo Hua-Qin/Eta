@@ -153,30 +153,32 @@ fun HistorySidePaneScaffold(
             }
         }
 
-        HistoryPanePanel(
-            state = state,
-            width = paneWidth,
-            onSearchChange = onSearchChange,
-            onConversationSelected = onConversationSelected,
-            onConversationRename = onConversationRename,
-            onConversationDelete = onConversationDelete,
-            onNewConversation = onNewConversation,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .offset { IntOffset(offsetPx.roundToInt(), 0) }
-                .pointerInput(visible, paneWidthPx) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { offset ->
-                            acceptsDrag = if (visible) {
-                                offset.x <= edgeSwipeWidthPx
-                            } else {
-                                offset.x >= size.width - edgeSwipeWidthPx
-                            }
-                            if (acceptsDrag) {
-                                dragging = true
-                                dragOffsetPx = animatedOffsetPx
-                            }
-                        },
+        // History panel - only visible when progress > 0
+        if (progress > 0.01f) {
+            HistoryPanePanel(
+                state = state,
+                width = paneWidth,
+                onSearchChange = onSearchChange,
+                onConversationSelected = onConversationSelected,
+                onConversationRename = onConversationRename,
+                onConversationDelete = onConversationDelete,
+                onNewConversation = onNewConversation,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset { IntOffset(offsetPx.roundToInt(), 0) }
+                    .pointerInput(visible, paneWidthPx) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { offset ->
+                                acceptsDrag = if (visible) {
+                                    offset.x <= edgeSwipeWidthPx
+                                } else {
+                                    offset.x >= size.width - edgeSwipeWidthPx
+                                }
+                                if (acceptsDrag) {
+                                    dragging = true
+                                    dragOffsetPx = animatedOffsetPx
+                                }
+                            },
                         onHorizontalDrag = { change: PointerInputChange, dragAmount: Float ->
                             if (acceptsDrag) {
                                 change.consume()
