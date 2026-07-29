@@ -201,9 +201,9 @@ fun HistorySidePaneScaffold(
                             acceptsDrag = false
                         },
                     )
-                }
-                .zIndex(1f),
-        )
+                    .zIndex(1f),
+            )
+        }
     }
 }
 
