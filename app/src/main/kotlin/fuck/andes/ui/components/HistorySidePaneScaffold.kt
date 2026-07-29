@@ -164,7 +164,7 @@ fun HistorySidePaneScaffold(
             onNewConversation = onNewConversation,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .offset { IntOffset(offsetPx - paneWidthPx, 0) }
+                .offset { IntOffset((offsetPx - paneWidthPx).roundToInt(), 0) }
                 .pointerInput(visible, paneWidthPx) {
                     detectHorizontalDragGestures(
                         onDragStart = { offset ->
@@ -200,7 +200,8 @@ fun HistorySidePaneScaffold(
                             acceptsDrag = false
                         },
                     )
-                    .zIndex(1f),
+                }
+                .zIndex(1f),
         )
     }
 }
